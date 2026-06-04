@@ -11,6 +11,11 @@ const PORT = Number(process.env.PORT) || 8080;
 
 app.use(express.json());
 
+// Redirect bare Cloud Run URL to the working home route
+app.get("/", (_req, res) => {
+  res.redirect("/home?country=PL");
+});
+
 // Synthetic Data
 const ORG_FEED = [
   // --- NEWS ---
