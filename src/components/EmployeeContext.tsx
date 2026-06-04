@@ -5,6 +5,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { TRANSLATIONS, TranslationDictionary, LanguageCode } from '../lib/translations';
+import botFriendly from '../assets/images/bot_friendly_1780519621026.png';
+import botProfessional from '../assets/images/bot_professional_1780519634593.png';
+import botCreative from '../assets/images/bot_creative_1780519646412.png';
 
 export interface Employee {
   name: string;
@@ -91,19 +94,19 @@ export const BOT_AVATARS: BotAvatarOption[] = [
   {
     id: 'friendly',
     name: 'Friendly Assistant',
-    url: '/src/assets/images/bot_friendly_1780519621026.png',
+    url: botFriendly,
     description: 'Sleek 3D humanoid robot with warm smiling eyes',
   },
   {
     id: 'professional',
     name: 'Professional Core',
-    url: '/src/assets/images/bot_professional_1780519634593.png',
+    url: botProfessional,
     description: 'Tech-forward metallic spherical core with digital highlights',
   },
   {
     id: 'creative',
     name: 'Creative Chibi',
-    url: '/src/assets/images/bot_creative_1780519646412.png',
+    url: botCreative,
     description: 'Cute 3D assistant with lemon yellow ears and pink headphones',
   },
 ];
@@ -172,9 +175,10 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState(() => localStorage.getItem('user-lang') || 'EN');
   const [dept, setDeptState] = useState(() => localStorage.getItem('user-dept') || 'Engineering');
   const [theme, setThemeState] = useState('light');
-  const [botAvatar, setBotAvatarState] = useState(
-    () => localStorage.getItem('bot-avatar') || '/src/assets/images/bot_friendly_1780519621026.png',
-  );
+  const [botAvatar, setBotAvatarState] = useState(() => {
+    const stored = localStorage.getItem('bot-avatar');
+    return stored && !stored.startsWith('/src/') ? stored : botFriendly;
+  });
   const [interfaceMode, setInterfaceModeState] = useState<'web' | 'mobile'>(() => {
     return (localStorage.getItem('interface-mode') as 'web' | 'mobile') || 'web';
   });
