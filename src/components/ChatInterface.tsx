@@ -210,6 +210,16 @@ export function ChatInterface({ initialQuery, onNavigate, employeeContext }: Cha
   const scrollRef = useRef<HTMLDivElement>(null);
   const initialHandled = useRef(false);
 
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ top: 0, behavior: 'auto' });
+      }
+
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    });
+  }, []);
+
   // Voice Listening System
   const [isListening, setIsListening] = useState(false);
   const [listeningError, setListeningError] = useState<string | null>(null);
@@ -335,9 +345,17 @@ export function ChatInterface({ initialQuery, onNavigate, employeeContext }: Cha
   ];
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (!scrollRef.current) return;
+
+    if (messages.length === 0) {
+      scrollRef.current.scrollTo({ top: 0, behavior: 'auto' });
+      return;
     }
+
+    scrollRef.current.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
   }, [messages]);
 
   useEffect(() => {
