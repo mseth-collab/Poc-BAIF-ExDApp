@@ -34,24 +34,24 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
   const [sideTab, setSideTab] = useState<'faq' | 'onboard'>('faq');
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
-const activeRegion = regions.find((r) => r.code === region);
-const regionName = activeRegion?.name || region;
+  const activeRegion = regions.find((r) => r.code === region);
+  const regionName = activeRegion?.name || region;
 
-const regionFlagMap: Record<string, string> = {
-  PL: '🇵🇱',
-  UA: '🇺🇦',
-  US: '🇺🇸',
-  CA: '🇨🇦',
-  DE: '🇩🇪',
-  HR: '🇭🇷',
-  FR: '🇫🇷',
-  GE: '🇬🇪',
-  BR: '🇧🇷',
-  CL: '🇨🇱',
-  BY: '🇧🇾',
-};
+  const regionFlagMap: Record<string, string> = {
+    PL: '🇵🇱',
+    UA: '🇺🇦',
+    US: '🇺🇸',
+    CA: '🇨🇦',
+    DE: '🇩🇪',
+    HR: '🇭🇷',
+    FR: '🇫🇷',
+    GE: '🇬🇪',
+    BR: '🇧🇷',
+    CL: '🇨🇱',
+    BY: '🇧🇾',
+  };
 
-const regionFlag = regionFlagMap[region] || activeRegion?.flag || '🌍';
+  const regionFlag = regionFlagMap[region] || activeRegion?.flag || '🌍';
   useEffect(() => {
     fetch('/api/stats').then(res => res.json()).then(setStats);
   }, []);
@@ -267,48 +267,30 @@ const regionFlag = regionFlagMap[region] || activeRegion?.flag || '🌍';
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="welcome-text">
             <span className="text-[10px] font-black text-primary uppercase tracking-widest mb-1 block">
-              {t('portalContext')}.
+              {t('portalContext')}
             </span>
             <h1 className="text-4xl font-extrabold text-slate-950">Hi, {employee.name}! 👋</h1>
             <div className="flex items-center gap-2 mt-1 select-none">
-              <span className="text-slate-500 text-sm font-bold">Workspace Region locked:</span>
-              <div className="flex items-center gap-2 mt-1 select-none">
-  <span className="text-slate-500 text-sm font-bold">
-    Workspace Region locked:
-             <span
-    className="text-sm leading-none"
-    style={{
-      fontFamily:
-        '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif',
-    }}
-    aria-hidden="true"
-  >
-    {regionFlag}
-  </span>
-  <span>
-    {regionName} &mdash; {region}
-  </span><div className="flex items-center gap-2 mt-1 select-none">
-  <span className="text-slate-500 text-sm font-bold">
-    Workspace Region locked:
-  </span>
-  <span className="inline-flex items-center gap-1.5 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full text-xs font-black text-slate-800">
-    <span
-      className="text-sm leading-none"
-      style={{
-        fontFamily:
-          '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif',
-      }}
-      aria-hidden="true"
-    >
-      {regionFlag}
-    </span>
+              <span className="text-slate-500 text-sm font-bold">
+                Workspace Region locked:
+              </span>
 
-    <span>
-      {regionName} &mdash; {region}
-    </span>
-  </span>
-</div>
-</span>
+              <span className="inline-flex items-center gap-1.5 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full text-xs font-black text-slate-800">
+                <span
+                  className="text-sm leading-none"
+                  style={{
+                    fontFamily:
+                      '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif',
+                  }}
+                  aria-hidden="true"
+                >
+                  {regionFlag}
+                </span>
+
+                <span>
+                  {regionName} &mdash; {region}
+                </span>
+              </span>
             </div>
           </div>
           <div className="flex gap-4 items-center">
