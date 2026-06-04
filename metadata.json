@@ -1,0 +1,6 @@
+{
+  "name": "BestFrAIend",
+  "description": "An intelligent employee portal for instant answers to HR, Finance, and IT queries.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
