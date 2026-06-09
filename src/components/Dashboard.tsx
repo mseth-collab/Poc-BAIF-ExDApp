@@ -134,6 +134,7 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
     t,
     employee,
     language,
+    setLanguage,
     regions,
     activePersonaId,
     setActivePersonaId,
@@ -156,17 +157,123 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
     openTICKETS: 3,
     remoteOffices: 8,
   });
+  const [ptoBalance, setPtoBalance] = useState<{
+    availableDays: number | null;
+    accruedDays?: number | null;
+    usedDays?: number | null;
+    pendingDays?: number | null;
+    policyLabel?: string;
+    source?: string;
+    lastUpdated?: string;
+  } | null>(null);
+  const [isLoadingPtoBalance, setIsLoadingPtoBalance] = useState(false);
+  const [ptoBalanceError, setPtoBalanceError] = useState<string | null>(null);
   const [sideTab, setSideTab] = useState<"faq" | "onboard">("faq");
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const activeRegion = regions.find((r) => r.code === region);
   const regionName = activeRegion?.name || region;
+  const effectiveLanguage = (language || "EN").toUpperCase();
+
+  const safeT = (key: string, fallback: string) => {
+    const value = t(key as any);
+    return value || fallback;
+  };
+
+  const languageOptions = [
+    { code: "EN", label: "English", nativeLabel: "English", sample: "Hello" },
+    { code: "PL", label: "Polish", nativeLabel: "Polski", sample: "ą ć ę ł ń ó ś ź ż" },
+    { code: "DE", label: "German", nativeLabel: "Deutsch", sample: "ä ö ü ß" },
+    { code: "HR", label: "Croatian", nativeLabel: "Hrvatski", sample: "č ć đ š ž" },
+    { code: "FR", label: "French", nativeLabel: "Français", sample: "à â ç é è ê ë î ï ô ù û ü œ" },
+    { code: "UA", label: "Ukrainian", nativeLabel: "Українська", sample: "ї є і ґ" },
+  ];
+
+  const activeLanguageOption =
+    languageOptions.find((option) => option.code === effectiveLanguage) ||
+    languageOptions[0];
+
+  const htmlLanguage =
+    {
+      EN: "en",
+      PL: "pl",
+      DE: "de",
+      HR: "hr",
+      FR: "fr",
+      UA: "uk",
+    }[effectiveLanguage] || "en";
 
   useEffect(() => {
     fetch("/api/stats")
       .then((res) => res.json())
       .then(setStats);
   }, []);
+
+  useEffect(() => {
+    const employeeIdentifier = employee?.email || activePersonaId;
+
+    if (!employeeIdentifier || !region) return;
+
+    let cancelled = false;
+
+    async function fetchPtoBalance() {
+      setIsLoadingPtoBalance(true);
+      setPtoBalanceError(null);
+
+      try {
+        const params = new URLSearchParams({
+          employeeId: String(employeeIdentifier),
+          region,
+          language: effectiveLanguage,
+        });
+
+        const res = await fetch(`/api/pto-balance?${params.toString()}`);
+
+        if (!res.ok) {
+          throw new Error(`PTO balance request failed with status ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (!cancelled) {
+          setPtoBalance({
+            availableDays:
+              typeof data.availableDays === "number" ? data.availableDays : null,
+            accruedDays:
+              typeof data.accruedDays === "number" ? data.accruedDays : null,
+            usedDays: typeof data.usedDays === "number" ? data.usedDays : null,
+            pendingDays:
+              typeof data.pendingDays === "number" ? data.pendingDays : null,
+            policyLabel: data.policyLabel,
+            source: data.source,
+            lastUpdated: data.lastUpdated,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch PTO balance", err);
+
+        if (!cancelled) {
+          setPtoBalance(null);
+          setPtoBalanceError(
+            safeT(
+              "ptoBalanceUnavailable",
+              "PTO balance unavailable. Showing regional policy only.",
+            ),
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingPtoBalance(false);
+        }
+      }
+    }
+
+    fetchPtoBalance();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [employee?.email, activePersonaId, region, effectiveLanguage]);
 
   const handleQuickAsk = async () => {
     if (!searchTerm.trim()) return;
@@ -180,7 +287,14 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
         body: JSON.stringify({
           messages: [{ role: "user", content: searchTerm }],
           region,
-          language,
+          language: effectiveLanguage,
+          employee: {
+            name: employee?.name,
+            email: employee?.email,
+            personaId: activePersonaId,
+          },
+          ptoBalance,
+          includePtoBalance: true,
         }),
       });
       const data = await res.json();
@@ -206,7 +320,7 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
   };
 
   useEffect(() => {
-    fetch(`/api/feed?language=${language}`)
+    fetch(`/api/feed?language=${effectiveLanguage}`)
       .then((res) => res.json())
       .then((data) => {
         // Filter feed by region or global
@@ -217,10 +331,10 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
         setRecentFeed(filtered.slice(0, 3));
       });
 
-    fetch(`/api/meetings?language=${language}`)
+    fetch(`/api/meetings?language=${effectiveLanguage}`)
       .then((res) => res.json())
       .then((data) => setMeetings(data));
-  }, [region, language]);
+  }, [region, effectiveLanguage]);
 
   useEffect(() => {
     if (searchTerm.length < 3 || quickAnswer) {
@@ -236,7 +350,11 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
         const res = await fetch("/api/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: searchTerm, region }),
+          body: JSON.stringify({
+            query: searchTerm,
+            region,
+            language: effectiveLanguage,
+          }),
         });
         const data = await res.json();
         setSearchResults(data);
@@ -261,11 +379,11 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           region,
-          language,
+          language: effectiveLanguage,
           messages: [
             {
               role: "user",
-              content: `Summarize the following recent company news for region ${region} in one short sentence, translated to the user's language ${language}: ${JSON.stringify(recentFeed)}`,
+              content: `Summarize the following recent company news for region ${region} in one short sentence, translated to the user's language ${effectiveLanguage}: ${JSON.stringify(recentFeed)}`,
             },
           ],
         }),
@@ -302,11 +420,11 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           region,
-          language,
+          language: effectiveLanguage,
           messages: [
             {
               role: "user",
-              content: `Summarize the key outcomes from these recent meetings in one concise sentence, translated to the user's language ${language}: ${JSON.stringify(meetings)}`,
+              content: `Summarize the key outcomes from these recent meetings in one concise sentence, translated to the user's language ${effectiveLanguage}: ${JSON.stringify(meetings)}`,
             },
           ],
         }),
@@ -352,29 +470,29 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
 
   const categories = [
     {
-      label: "HR & People",
-      desc: "Policies, Onboarding",
+      label: safeT("hrPeople", "HR & People"),
+      desc: safeT("policiesOnboarding", "Policies, Onboarding"),
       icon: "🫂",
       color: "bg-[#E6F2FF]",
       key: "knowledge",
     },
     {
-      label: "Finance",
-      desc: "Expenses, Payroll",
+      label: safeT("finance", "Finance"),
+      desc: safeT("expensesPayroll", "Expenses, Payroll"),
       icon: "💸",
       color: "bg-[#FFF2E6]",
       key: "knowledge",
     },
     {
-      label: "Tech Stack",
-      desc: "Wiki, Runbooks",
+      label: safeT("techStack", "Tech Stack"),
+      desc: safeT("wikiRunbooks", "Wiki, Runbooks"),
       icon: "💻",
       color: "bg-[#F0FFF4]",
       key: "knowledge",
     },
     {
-      label: "Support Desk",
-      desc: "Open Tickets",
+      label: safeT("supportDesk", "Support Desk"),
+      desc: safeT("openTickets", "Open Tickets"),
       icon: "tickets",
       key: "tickets",
     },
@@ -463,6 +581,28 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
 
   const dynCards = getDynamicPersonaCards();
 
+  const actualPtoCardValue = isLoadingPtoBalance
+    ? safeT("loading", "Loading...")
+    : ptoBalance?.availableDays != null
+      ? `${ptoBalance.availableDays} ${safeT("days", "days")}`
+      : dynCards.card1Val;
+
+  const actualPtoCardLabel =
+    ptoBalance?.policyLabel ||
+    dynCards.card1Lbl ||
+    safeT("ptoBalance", "PTO Balance");
+
+  const actualPtoTooltip =
+    ptoBalance?.availableDays != null
+      ? `Available: ${ptoBalance.availableDays} days${
+          ptoBalance.usedDays != null ? ` • Used: ${ptoBalance.usedDays}` : ""
+        }${
+          ptoBalance.pendingDays != null
+            ? ` • Pending: ${ptoBalance.pendingDays}`
+            : ""
+        }`
+      : ptoBalanceError || "Regional policy value shown.";
+
   return (
     <div className="flex h-full">
       <div className="flex-1 p-10 overflow-y-auto space-y-12">
@@ -484,6 +624,32 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
                 <span>
                   {regionName} &mdash; {region}
                 </span>
+              </span>
+
+              <label className="inline-flex items-center gap-2 bg-white border border-slate-200 px-3 py-1 rounded-full text-xs font-black text-slate-700 shadow-sm">
+                <span className="text-slate-400 uppercase tracking-wider">
+                  {safeT("language", "Language")}
+                </span>
+
+                <select
+                  value={effectiveLanguage}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="bg-transparent outline-none text-xs font-black text-slate-800 cursor-pointer"
+                  aria-label="Select display language"
+                >
+                  {languageOptions.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {option.nativeLabel}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <span
+                className="hidden lg:inline-flex items-center gap-1 bg-primary/5 border border-primary/10 px-3 py-1 rounded-full text-[10px] font-bold text-primary"
+                title={`Supported characters for ${activeLanguageOption.label}`}
+              >
+                {activeLanguageOption.sample}
               </span>
             </div>
           </div>
@@ -534,12 +700,25 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
                 🌴
               </div>
               <div className="min-w-0">
-                <div className="text-2xl font-black text-rose-800 tracking-tight leading-none mb-1">
-                  {dynCards.card1Val}
+                <div
+                  className="text-2xl font-black text-rose-800 tracking-tight leading-none mb-1"
+                  title={actualPtoTooltip}
+                >
+                  {actualPtoCardValue}
                 </div>
                 <div className="text-[10px] font-black uppercase tracking-wider text-rose-600/70 truncate">
-                  {dynCards.card1Lbl}
+                  {actualPtoCardLabel}
                 </div>
+                {ptoBalance?.lastUpdated && (
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-rose-400 mt-1">
+                    Updated {new Date(ptoBalance.lastUpdated).toLocaleDateString()}
+                  </div>
+                )}
+                {ptoBalanceError && (
+                  <div className="text-[9px] font-bold text-amber-600 mt-1 leading-tight">
+                    {ptoBalanceError}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -699,6 +878,10 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
                       if (quickAnswer) setQuickAnswer(null);
                     }}
                     placeholder={t("searchPlaceholder")}
+                    lang={htmlLanguage}
+                    inputMode="text"
+                    autoComplete="off"
+                    spellCheck={true}
                     className="w-full py-3.5 pl-11 pr-32 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-sm font-medium text-slate-800 placeholder-slate-400 shadow-sm transition-all bg-white-50/50"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -777,10 +960,11 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
 
               <div className="flex gap-2 flex-wrap">
                 {[
-                  "How are you?",
-                  "VPN Policy",
-                  "Nomad Rule",
-                  "Benefits 2026",
+                  safeT("chipHowAreYou", "How are you?"),
+                  safeT("chipVpnPolicy", "VPN Policy"),
+                  safeT("chipNomadRule", "Nomad Rule"),
+                  safeT("chipBenefits", "Benefits 2026"),
+                  safeT("chipPtoBalance", "How much PTO do I have?"),
                 ].map((chip, idx) => (
                   <button
                     key={`${chip}-${idx}`}
