@@ -368,7 +368,7 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
     return () => {
       if (searchTimeout.current) clearTimeout(searchTimeout.current);
     };
-  }, [searchTerm, region]);
+  }, [searchTerm, region, effectiveLanguage]);
 
   const handleSummarizeFeed = async () => {
     setIsSummarizingFeed(true);
@@ -606,82 +606,106 @@ export function Dashboard({ onNavigate, employeeContext }: DashboardProps) {
   return (
     <div className="flex h-full">
       <div className="flex-1 p-10 overflow-y-auto space-y-12">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="welcome-text">
-            <span className="text-[10px] font-black text-primary uppercase tracking-widest mb-1 block">
-              {t("portalContext")}
-            </span>
-            <h1 className="text-4xl font-extrabold text-slate-950">
-              Hi, {employee.name}! 👋
-            </h1>
-            <div className="flex items-center gap-2 mt-1 select-none">
-              <span className="text-slate-500 text-sm font-bold">
-                Workspace Region locked:
+        <header className="rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0">
+              <span className="text-[10px] font-black text-primary uppercase tracking-widest mb-1 block">
+                {safeT("portalContext", "Portal context")}
               </span>
 
-              <span className="inline-flex items-center gap-1.5 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full text-xs font-black text-slate-800">
-                <RegionFlag code={region} />
-                <span>
-                  {regionName} &mdash; {region}
-                </span>
-              </span>
+              <h1 className="text-4xl font-extrabold text-slate-950 leading-tight">
+                Hi, {employee.name}! 👋
+              </h1>
 
-              <label className="inline-flex items-center gap-2 bg-white border border-slate-200 px-3 py-1 rounded-full text-xs font-black text-slate-700 shadow-sm">
-                <span className="text-slate-400 uppercase tracking-wider">
-                  {safeT("language", "Language")}
-                </span>
+              <p className="mt-1 text-sm font-bold text-slate-500">
+                {employee.role} · {regionName} · {activeLanguageOption.nativeLabel}
+              </p>
 
-                <select
-                  value={effectiveLanguage}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="bg-transparent outline-none text-xs font-black text-slate-800 cursor-pointer"
-                  aria-label="Select display language"
-                >
-                  {languageOptions.map((option) => (
-                    <option key={option.code} value={option.code}>
-                      {option.nativeLabel}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {safeT("employeeRegion", "Employee region")}
+                  </div>
 
-              <span
-                className="hidden lg:inline-flex items-center gap-1 bg-primary/5 border border-primary/10 px-3 py-1 rounded-full text-[10px] font-bold text-primary"
-                title={`Supported characters for ${activeLanguageOption.label}`}
-              >
-                {activeLanguageOption.sample}
-              </span>
+                  <div className="mt-1 flex items-center gap-2 text-sm font-black text-slate-900">
+                    <RegionFlag code={region} />
+                    <span>{regionName}</span>
+                    <span className="text-slate-400">·</span>
+                    <span>{region}</span>
+                  </div>
+
+                  <div className="mt-1 text-[10px] font-bold text-slate-400">
+                    {safeT(
+                      "regionLockedHelp",
+                      "Locked to the logged-in employee profile.",
+                    )}
+                  </div>
+                </div>
+
+                <label className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {safeT("displayLanguage", "Display language")}
+                  </div>
+
+                  <select
+                    value={effectiveLanguage}
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className="mt-1 w-full bg-transparent text-sm font-black text-slate-900 outline-none cursor-pointer"
+                    aria-label="Select display language"
+                  >
+                    {languageOptions.map((option) => (
+                      <option key={option.code} value={option.code}>
+                        {option.nativeLabel}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="mt-1 text-[10px] font-bold text-slate-400">
+                    {safeT(
+                      "languageHelp",
+                      "Changes labels, prompts, policy answers, and assistant replies.",
+                    )}
+                  </div>
+                </label>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-4 items-center">
-            <button
-              onClick={handleSummarizeFeed}
-              disabled={isSummarizingFeed}
-              className="flex items-center gap-2 px-6 py-2 bg-primary/10 text-primary hover:bg-primary/20 transition-all shadow-sm disabled:opacity-50 rounded-full text-[10px] font-black uppercase tracking-widest"
-            >
-              <Sparkles
-                size={14}
-                className={isSummarizingFeed ? "animate-spin" : ""}
-              />
-              {feedSummary ? "Region Briefed" : "Brief Region"}
-            </button>
-            <button
-              onClick={handleSummarizeMeetings}
-              disabled={isSummarizingMeetings}
-              className="flex items-center gap-2 px-6 py-2 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all shadow-sm disabled:opacity-50"
-            >
-              <Target
-                size={14}
-                className={isSummarizingMeetings ? "animate-spin" : ""}
-              />
-              {meetingSummary ? "Summary Ready" : "Global Summary"}
-            </button>
-            <div className="w-12 h-12 bg-primary text-white rounded-xl flex items-center justify-center font-black shadow-sm uppercase text-sm border border-primary/25">
-              {employee.name
-                .split(" ")
-                .map((n: string) => n[0])
-                .join("")
-                .toUpperCase()}
+
+            <div className="flex flex-wrap items-center gap-3 xl:justify-end">
+              <button
+                onClick={handleSummarizeFeed}
+                disabled={isSummarizingFeed}
+                className="flex items-center gap-2 rounded-2xl bg-primary/10 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-primary shadow-sm transition-all hover:bg-primary/20 disabled:opacity-50"
+              >
+                <Sparkles
+                  size={14}
+                  className={isSummarizingFeed ? "animate-spin" : ""}
+                />
+                {feedSummary
+                  ? safeT("regionBriefed", "Region briefed")
+                  : safeT("briefRegion", "Brief region")}
+              </button>
+
+              <button
+                onClick={handleSummarizeMeetings}
+                disabled={isSummarizingMeetings}
+                className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-emerald-700 shadow-sm transition-all hover:bg-emerald-100 disabled:opacity-50"
+              >
+                <Target
+                  size={14}
+                  className={isSummarizingMeetings ? "animate-spin" : ""}
+                />
+                {meetingSummary
+                  ? safeT("summaryReady", "Summary ready")
+                  : safeT("globalSummary", "Global summary")}
+              </button>
+
+              <div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center font-black shadow-sm uppercase text-sm border border-primary/25">
+                {employee.name
+                  .split(" ")
+                  .map((n: string) => n[0])
+                  .join("")
+                  .toUpperCase()}
+              </div>
             </div>
           </div>
         </header>
